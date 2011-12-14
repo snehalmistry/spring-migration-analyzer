@@ -20,8 +20,6 @@ import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 
 import org.springframework.migrationanalyzer.analyze.AnalysisResult;
 import org.springframework.migrationanalyzer.analyze.fs.FileSystemEntry;
@@ -29,6 +27,7 @@ import org.springframework.migrationanalyzer.render.ByFileSystemEntryController;
 import org.springframework.migrationanalyzer.render.OutputPathGenerator;
 import org.springframework.migrationanalyzer.render.support.source.SourceAccessor;
 import org.springframework.migrationanalyzer.util.IoUtils;
+import org.springframework.migrationanalyzer.util.Tree;
 
 @SuppressWarnings("rawtypes")
 final class StandardHtmlFileSystemEntryRenderer implements HtmlFileSystemEntryRenderer {
@@ -101,21 +100,10 @@ final class StandardHtmlFileSystemEntryRenderer implements HtmlFileSystemEntryRe
     }
 
     private Map<String, Object> createContentsModel(Set<FileSystemEntry> fileSystemEntries, OutputPathGenerator locationAwarePathGenerator) {
-        Map<String, Set<String>> entryUrls = new TreeMap<String, Set<String>>();
-        for (FileSystemEntry fileSystemEntry : fileSystemEntries) {
-            String baseName = getBaseName(fileSystemEntry.getName());
-            if (baseName != null) {
-                Set<String> urls = entryUrls.get(baseName);
-                if (urls == null) {
-                    urls = new TreeSet<String>();
-                    entryUrls.put(baseName, urls);
-                }
-                urls.add(locationAwarePathGenerator.generatePathFor(fileSystemEntry));
-            }
-        }
-
+        HierarchicalFileSystemEntryOrganizer organizer = new HierarchicalFileSystemEntryOrganizer();
+        Tree<String> rootTree = organizer.organize(fileSystemEntries, locationAwarePathGenerator);
         Map<String, Object> model = new HashMap<String, Object>();
-        model.put("entryUrls", entryUrls);
+        model.put("treeUrls", rootTree);
         return model;
     }
 
@@ -150,10 +138,4 @@ final class StandardHtmlFileSystemEntryRenderer implements HtmlFileSystemEntryRe
         this.viewRenderer.renderViewWithEmptyModel(VIEW_NAME_BY_FILE_FOOTER, writer);
     }
 
-    private String getBaseName(String path) {
-        if (path != null) {
-            return path.substring(path.lastIndexOf('/') + 1);
-        }
-        return null;
-    }
 }
